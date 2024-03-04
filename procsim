@@ -23,16 +23,14 @@ class Proceso:
 
     def run(self):
         self.start_time = self.env.now
-        print(f"Proccess {self.id} started on time {self.start_time}")
-
+        print(f"Process {self.id} started on time {self.start_time}")
         yield self.ram.get(self.memoria)  
         with self.cpu.request() as req:
             yield req  
-            yield self.env.timeout(random.uniform(1, 50))  # generar tiempo de ejecución aleatorio entre 1 - 50
+            yield self.env.timeout(random.uniform(1, 50) / self.cpu.capacity)  # Divide the execution time by the number of processors
         yield self.ram.put(self.memoria)
-
         self.end_time = self.env.now
-        print(f"Proccess {self.id} ended en time {self.end_time}")
+        print(f"Process {self.id} ended en time {self.end_time}")
 
 def simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos):
     for i in range(num_procesos):
@@ -42,7 +40,7 @@ def simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos):
         yield env.timeout(intervalo_llegada)
 
 
-def ejecutar(num_procesos, intervalo_llegada, ram_size=100, cpu_count=1):
+def ejecutar(num_procesos, intervalo_llegada, ram_size=100, cpu_count=1, cpu_speed=1):
     env = simpy.Environment()
     ram = simpy.Container(env, init=ram_size, capacity=ram_size)
     cpu = simpy.Resource(env, capacity=cpu_count)
@@ -60,14 +58,15 @@ def ejecutar(num_procesos, intervalo_llegada, ram_size=100, cpu_count=1):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Procsim - Simulador de procesos')
-    parser.add_argument('-p', '--proccess', type=int, default=25, help='Cantidad de procesos')
-    parser.add_argument('-R', '--ram', type=int, default=100, help='Tamaño de la RAM')
-    parser.add_argument('-i', '--interval', type=int, default=5, help='Intervalo de llegada')
-    parser.add_argument('-C', '--cpu', type=int, default=1, help='Cantidad de CPUs')
+    parser = argparse.ArgumentParser(description='Procsim - Process Simulator')
+    parser.add_argument('-p', '--process', type=int, default=25, help='Number of processes')
+    parser.add_argument('-R', '--ram', type=int, default=100, help='RAM Size')
+    parser.add_argument('-i', '--interval', type=int, default=10, help='Arrival interval')
+    parser.add_argument('-S', '--speed', type=int, default=1, help='Processor Speed')
+    parser.add_argument('-P', '--processor', type=int, default=1, help='Processor number')
     args = parser.parse_args()
     print("Procsim 1.1")
 
-    promedio_tiempo, desviacion_estandar = ejecutar(args.proccess, args.interval, args.ram, args.cpu)
-    print(f"For {args.proccess} processes with arrival interval {args.interval} and {args.cpu} CPU(s):")
+    promedio_tiempo, desviacion_estandar = ejecutar(args.process, args.interval, args.ram, args.speed, args.processor)
+    print(f"For {args.process} processes with arrival interval {args.interval}, {args.speed} CPU(s) and processor speed {args.processor}:")
     print(f"Average time {promedio_tiempo}, Standard Deviation: {desviacion_estandar}")
