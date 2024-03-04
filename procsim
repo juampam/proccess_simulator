@@ -3,6 +3,7 @@ import simpy
 import random
 import numpy as np
 import time
+import argparse
 
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
@@ -22,16 +23,16 @@ class Proceso:
 
     def run(self):
         self.start_time = self.env.now
-        print(f"Proceso {self.id} iniciado en tiempo {self.start_time}")
+        print(f"Proccess {self.id} started on time {self.start_time}")
 
         yield self.ram.get(self.memoria)  
         with self.cpu.request() as req:
             yield req  
-            yield self.env.timeout(1)  # Unidad de tiempo para ejecutar 3 instrucciones
+            yield self.env.timeout(random.uniform(1, 50))  # generar tiempo de ejecución aleatorio entre 1 - 50
         yield self.ram.put(self.memoria)
 
         self.end_time = self.env.now
-        print(f"Proceso {self.id} finalizado en tiempo {self.end_time}")
+        print(f"Proccess {self.id} ended en time {self.end_time}")
 
 def simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos):
     for i in range(num_procesos):
@@ -41,10 +42,10 @@ def simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos):
         yield env.timeout(intervalo_llegada)
 
 
-def ejecutar(num_procesos, intervalo_llegada):
+def ejecutar(num_procesos, intervalo_llegada, ram_size=100, cpu_count=1):
     env = simpy.Environment()
-    ram = simpy.Container(env, init=100, capacity=100)
-    cpu = simpy.Resource(env, capacity=1)
+    ram = simpy.Container(env, init=ram_size, capacity=ram_size)
+    cpu = simpy.Resource(env, capacity=cpu_count)
 
     procesos = []
     env.process(simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos))
@@ -58,15 +59,15 @@ def ejecutar(num_procesos, intervalo_llegada):
         return float('nan'), float('nan')
 
 
-
 if __name__ == "__main__":
-    num_procesos = [25, 50, 100, 150, 200]
-    intervalos_llegada = [10, 5, 1]
-    print("Procsim 1.0.2\nProccess simulator\nExecuting 100 proccess")
-    time.sleep(3)
-    for n in num_procesos:
+    parser = argparse.ArgumentParser(description='Procsim - Simulador de procesos')
+    parser.add_argument('-p', '--proccess', type=int, default=25, help='Cantidad de procesos')
+    parser.add_argument('-R', '--ram', type=int, default=100, help='Tamaño de la RAM')
+    parser.add_argument('-i', '--interval', type=int, default=5, help='Intervalo de llegada')
+    parser.add_argument('-C', '--cpu', type=int, default=1, help='Cantidad de CPUs')
+    args = parser.parse_args()
+    print("Procsim 1.1")
 
-        for intervalo in intervalos_llegada:
-            promedio_tiempo, desviacion_estandar = ejecutar(n, intervalo)
-            print(f"Para {n} procesos con intervalo de llegada {intervalo}:")
-            print(f"Promedio de tiempo: {promedio_tiempo}, Desviación Estándar: {desviacion_estandar}")
+    promedio_tiempo, desviacion_estandar = ejecutar(args.proccess, args.interval, args.ram, args.cpu)
+    print(f"For {args.proccess} processes with arrival interval {args.interval} and {args.cpu} CPU(s):")
+    print(f"Average time {promedio_tiempo}, Standard Deviation: {desviacion_estandar}")
