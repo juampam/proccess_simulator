@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+import simpy
+import random
+import numpy as np
+import time
+
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
+
+class Proceso:
+    def __init__(self, env, ram, cpu, id):
+        self.env = env
+        self.ram = ram
+        self.cpu = cpu
+        self.id = id
+
+        self.instrucciones = random.randint(1, 10)
+        self.memoria = random.randint(1, 10)
+
+        self.start_time = -1
+        self.end_time = -1
+
+    def run(self):
+        self.start_time = self.env.now
+        print(f"Proceso {self.id} iniciado en tiempo {self.start_time}")
+
+        yield self.ram.get(self.memoria)  
+        with self.cpu.request() as req:
+            yield req  
+            yield self.env.timeout(1)  # Unidad de tiempo para ejecutar 3 instrucciones
+        yield self.ram.put(self.memoria)
+
+        self.end_time = self.env.now
+        print(f"Proceso {self.id} finalizado en tiempo {self.end_time}")
+
+def simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos):
+    for i in range(num_procesos):
+        proceso = Proceso(env, ram, cpu, i)
+        procesos.append(proceso)  # Agregar proceso a la lista
+        env.process(proceso.run())
+        yield env.timeout(intervalo_llegada)
+
+
+def ejecutar(num_procesos, intervalo_llegada):
+    env = simpy.Environment()
+    ram = simpy.Container(env, init=100, capacity=100)
+    cpu = simpy.Resource(env, capacity=1)
+
+    procesos = []
+    env.process(simulacion(env, ram, cpu, num_procesos, intervalo_llegada, procesos))
+    env.run()
+
+    tiempos = [p.end_time - p.start_time for p in procesos if hasattr(p, 'end_time') and hasattr(p, 'start_time')]
+    
+    if tiempos:
+        return np.mean(tiempos), np.std(tiempos)
+    else:
+        return float('nan'), float('nan')
+
+
+
+if __name__ == "__main__":
+    num_procesos = [25, 50, 100, 150, 200]
+    intervalos_llegada = [10, 5, 1]
+    print("Procsim 1.0.2\nProccess simulator\nExecuting 100 proccess")
+    time.sleep(3)
+    for n in num_procesos:
+
+        for intervalo in intervalos_llegada:
+            promedio_tiempo, desviacion_estandar = ejecutar(n, intervalo)
+            print(f"Para {n} procesos con intervalo de llegada {intervalo}:")
+            print(f"Promedio de tiempo: {promedio_tiempo}, Desviación Estándar: {desviacion_estandar}")
